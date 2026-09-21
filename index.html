@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Player Performance Analyzer</title>
+<script src="https://script.google.com/macros/s/AKfycbxyXiwRzNMfkY7ufp6z31e4A7gQu6ovRjgMCPRf128VSLvA65gmwNA2Sr_nNTV0kMx2/exec"></script>
+<style>
+  :root{
+    --bg:#f6f7fb; --card:#ffffff; --text:#1b1e28; --muted:#6b7280;
+    --border:#e5e7eb; --accent:#2f6fed; --accent-dark:#1f4fbf;
+    --good:#1c9d63; --warn:#e0982b; --bad:#dc4c4c; --shadow:0 1px 3px rgba(0,0,0,0.08);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#12141c; --card:#1b1e28; --text:#eef0f5; --muted:#9aa0ac;
+      --border:#2a2e3a; --accent:#5b8dff; --accent-dark:#7ba2ff;
+      --good:#33c17c; --warn:#e5a63e; --bad:#e35d5d; --shadow:0 1px 3px rgba(0,0,0,0.4);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#12141c; --card:#1b1e28; --text:#eef0f5; --muted:#9aa0ac;
+    --border:#2a2e3a; --accent:#5b8dff; --accent-dark:#7ba2ff;
+    --good:#33c17c; --warn:#e5a63e; --bad:#e35d5d; --shadow:0 1px 3px rgba(0,0,0,0.4);
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; min-height:100vh;}
+  .wrap{max-width:980px;margin:0 auto;padding:20px 16px 60px;}
+  h1{font-size:1.35rem;margin:4px 0 2px;}
+  .sub{color:var(--muted);font-size:0.9rem;margin:0 0 18px;}
+  .tabs{display:flex;gap:8px;margin-bottom:18px;border-bottom:1px solid var(--border);flex-wrap:wrap;}
+  .tab{padding:9px 14px;font-size:0.92rem;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;user-select:none;}
+  .tab.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:600;}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:16px;box-shadow:var(--shadow);}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
+  @media (max-width:640px){.grid2,.grid3{grid-template-columns:1fr;}}
+  label{display:block;font-size:0.82rem;color:var(--muted);margin-bottom:4px;margin-top:10px;}
+  input[type=text],input[type=number],select,textarea{
+    width:100%;padding:9px 10px;border:1px solid var(--border);border-radius:8px;
+    background:var(--bg);color:var(--text);font-size:0.92rem;font-family:inherit;
+  }
+  textarea{resize:vertical;min-height:60px;}
+  .test-field label{display:flex;justify-content:space-between;}
+  .unit-tag{color:var(--muted);font-weight:400;}
+  button{background:var(--accent);color:#fff;border:none;border-radius:8px;padding:10px 18px;font-size:0.92rem;font-weight:600;cursor:pointer;margin-top:16px;}
+  button:hover{background:var(--accent-dark);}
+  button.ghost{background:transparent;color:var(--accent);border:1px solid var(--border);}
+  .status{font-size:0.85rem;color:var(--muted);margin-top:8px;min-height:18px;}
+  .player-list{display:flex;flex-direction:column;gap:8px;}
+  .player-item{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border:1px solid var(--border);border-radius:10px;cursor:pointer;background:var(--card);}
+  .player-item:hover{border-color:var(--accent);}
+  .player-item.selected{border-color:var(--accent);background:rgba(47,111,237,0.08);}
+  .player-name{font-weight:600;}
+  .player-meta{color:var(--muted);font-size:0.82rem;}
+  .badge{font-size:0.72rem;padding:3px 8px;border-radius:100px;background:var(--bg);border:1px solid var(--border);color:var(--muted);}
+  .badge.pending{color:var(--warn);border-color:var(--warn);}
+  .badge.done{color:var(--good);border-color:var(--good);}
+  .empty{color:var(--muted);font-size:0.9rem;text-align:center;padding:30px 0;}
+  .back{color:var(--accent);cursor:pointer;font-size:0.88rem;margin-bottom:12px;display:inline-block;}
+  .detail-head{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;}
+  .chip-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
+  .chip{font-size:0.78rem;padding:4px 10px;border-radius:100px;border:1px solid var(--border);}
+  .chip.good{color:var(--good);border-color:var(--good);}
+  .charts{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:6px;}
+  @media (max-width:640px){.charts{grid-template-columns:1fr;}}
+  .chart-box{position:relative;height:260px;}
+  h3{font-size:0.95rem;margin:0 0 8px;}
+  table.testtable{width:100%;border-collapse:collapse;font-size:0.87rem;}
+  table.testtable td,table.testtable th{padding:7px 6px;border-bottom:1px solid var(--border);text-align:left;}
+  table.testtable th{color:var(--muted);font-weight:600;font-size:0.78rem;}
+  .pctl{font-weight:600;}
+  .pctl.hi{color:var(--good);}
+  .pctl.lo{color:var(--bad);}
+  .pctl.mid{color:var(--warn);}
+  .tips{margin-top:6px;padding-left:0;list-style:none;}
+  .tips li{font-size:0.85rem;margin-bottom:6px;padding-left:14px;position:relative;}
+  .tips li:before{content:"→";position:absolute;left:0;color:var(--accent);}
+  .del{color:var(--bad);font-size:0.8rem;cursor:pointer;margin-top:14px;display:inline-block;}
+  .notice{font-size:0.78rem;color:var(--muted);margin-top:2px;}
+  .filter-row{display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap;}
+  .filter-row select,.filter-row input{width:auto;min-width:180px;}
+  .bench-box{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-top:10px;font-size:0.85rem;}
+  .bench-box b{color:var(--accent);}
+  .coach-selected-box{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-top:12px;}
+  .link-btn{color:var(--accent);cursor:pointer;font-size:0.85rem;display:inline-block;margin-top:10px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🏆 Player Performance Analyzer</h1>
+  <p class="sub">Students fill in their own details. Coaches fill in the test results.</p>
+
+  <div class="tabs">
+    <div class="tab active" data-tab="student">Student Entry</div>
+    <div class="tab" data-tab="coach">Coach Entry</div>
+    <div class="tab" data-tab="dashboard">Dashboard</div>
+  </div>
+
+  <!-- ===================== STUDENT ENTRY ===================== -->
+  <div id="tab-student" class="card">
+    <p class="notice" style="margin-top:0;">Fill this in yourself once — your coach will add your test results later.</p>
+    <label>Sport *</label>
+    <select id="s-sport"></select>
+
+    <div class="grid2">
+      <div>
+        <label>Full name *</label>
+        <input type="text" id="s-name" placeholder="e.g. Arun Kumar">
+      </div>
+      <div>
+        <label>Age (years)</label>
+        <input type="number" id="s-age" min="10" max="45">
+      </div>
+      <div>
+        <label>Height (cm)</label>
+        <input type="number" id="s-height" min="100" max="230">
+      </div>
+      <div>
+        <label>Weight (kg)</label>
+        <input type="number" id="s-weight" min="20" max="150">
+      </div>
+      <div>
+        <label>Blood group</label>
+        <select id="s-blood">
+          <option>A+</option><option>A-</option><option>B+</option><option>B-</option>
+          <option>O+</option><option>O-</option><option>AB+</option><option>AB-</option>
+        </select>
+      </div>
+      <div>
+        <label>Position / role you usually play (if any)</label>
+        <select id="s-position"></select>
+      </div>
+    </div>
+
+    <label>Anything your coach should know (optional)</label>
+    <textarea id="s-notes" placeholder="Injury history, preferences, etc."></textarea>
+
+    <button id="btn-student-save">Submit my details</button>
+    <span class="notice" style="display:block;margin-top:6px;">Your details are saved directly into the shared spreadsheet.</span>
+    <div class="status" id="student-status"></div>
+  </div>
+
+  <!-- ===================== COACH ENTRY ===================== -->
+  <div id="tab-coach" class="card" style="display:none;">
+    <p class="notice" style="margin-top:0;">Pick a student below, then fill in their test results.</p>
+    <div class="filter-row">
+      <select id="coach-sport-filter"><option value="">All sports</option></select>
+      <input type="text" id="coach-search" placeholder="Search by name...">
+    </div>
+    <div class="player-list" id="coach-player-list"></div>
+    <div class="empty" id="coach-list-empty" style="display:none;"></div>
+    <span class="link-btn" id="coach-quickadd-toggle">+ Student not listed yet? Add them</span>
+
+    <div id="coach-quickadd-box" style="display:none;margin-top:10px;">
+      <div class="grid2">
+        <div><label>Sport *</label><select id="qa-sport"></select></div>
+        <div><label>Full name *</label><input type="text" id="qa-name"></div>
+      </div>
+      <button id="btn-quickadd" class="ghost">Add & continue</button>
+    </div>
+
+    <div id="coach-selected-box" style="display:none;">
+      <div class="coach-selected-box">
+        <div class="chip-row" id="coach-selected-info"></div>
+        <label>Position / role</label>
+        <select id="c-position"></select>
+
+        <h3 style="margin-top:18px;" id="c-tests-heading">Test results</h3>
+        <p class="notice" id="c-tests-note"></p>
+        <div class="grid3" id="c-test-fields"></div>
+
+        <label>Matches / sessions observed (optional)</label>
+        <input type="number" id="c-matches" min="0">
+
+        <label>Coach notes (optional)</label>
+        <textarea id="c-notes" placeholder="Assessment notes..."></textarea>
+
+        <button id="btn-coach-save">Save results</button>
+        <div class="status" id="coach-status"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== DASHBOARD ===================== -->
+  <div id="tab-dashboard" class="card" style="display:none;">
+    <div id="dash-list-view">
+      <div class="filter-row">
+        <label style="margin:0;">Filter by sport:</label>
+        <select id="filter-sport"><option value="">All sports</option></select>
+      </div>
+      <div class="player-list" id="player-list"></div>
+      <div class="empty" id="list-empty" style="display:none;"></div>
+    </div>
+    <div id="dash-detail-view" style="display:none;">
+      <span class="back" id="back-to-list">← Back to all players</span>
+      <div id="detail-content"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// PASTE YOUR GOOGLE APPS SCRIPT WEB APP URL HERE (see setup guide)
+// ============================================================
+const SCRIPT_URL = "PASTE_YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE";
+
+async function apiGetAll(){
+  const res = await fetch(SCRIPT_URL);
+  const rows = await res.json();
+  return rows.map(r => ({...r, tests: JSON.parse(r.testsJson || "{}")}));
+}
+async function apiCreate(playerObj){
+  const {tests, ...rest} = playerObj;
+  const payload = {...rest, testsJson: JSON.stringify(tests || {})};
+  const res = await fetch(SCRIPT_URL, {
+    method: "POST",
+    headers: {"Content-Type":"text/plain;charset=utf-8"},
+    body: JSON.stringify({action:"create", data: payload})
+  });
+  return await res.json();
+}
+async function apiUpdate(id, updates){
+  const payload = {...updates};
+  if(payload.tests !== undefined){
+    payload.testsJson = JSON.stringify(payload.tests);
+    delete payload.tests;
+  }
+  const res = await fetch(SCRIPT_URL, {
+    method: "POST",
+    headers: {"Content-Type":"text/plain;charset=utf-8"},
+    body: JSON.stringify({action:"update", id, data: payload})
+  });
+  return await res.json();
+}
+async function apiDelete(id){
+  const res = await fetch(SCRIPT_URL, {
+    method: "POST",
+    headers: {"Content-Type":"text/plain;charset=utf-8"},
+    body: JSON.stringify({action:"delete", id})
+  });
+  return await res.json();
+}
+
+function T(key,label,unit,direction){ return {key,label,unit,direction}; }
+
+const SPORTS = {
+  "Football (Soccer)": {
+    note: "Standard field-testing battery used by professional/national football setups (FIFA-aligned research).",
+    positions: ["Goalkeeper","Defender","Full-back","Midfielder","Winger","Striker / Forward"],
+    tests: [
+      T("sprint30m","30m Sprint","sec","lower"),
+      T("cmj","Countermovement Jump (CMJ)","cm","higher"),
+      T("agilityTtest","Agility (T-test)","sec","lower"),
+      T("yoyoLevel","Yo-Yo IR1 Level","level","higher"),
+    ]
+  },
+  "Basketball": {
+    note: "Based on the NBA Draft Combine testing protocol.",
+    positions: ["Point Guard","Shooting Guard","Small Forward","Power Forward","Center"],
+    tests: [
+      T("wingspan","Wingspan","cm","higher"),
+      T("standingReach","Standing Reach","cm","higher"),
+      T("laneAgility","Lane Agility","sec","lower"),
+      T("shuttleRun","Shuttle Run","sec","lower"),
+      T("standingVertical","Standing Vertical Leap","cm","higher"),
+      T("maxVertical","Max Vertical Leap (run-up)","cm","higher"),
+    ]
+  },
+  "Volleyball": {
+    note: "Based on national-team combine testing (e.g. Volleyball Canada / FIVB-aligned protocols).",
+    positions: ["Setter","Libero","Spiker / Attacker","Blocker (Middle)","Server specialist"],
+    tests: [
+      T("standingReach","Standing Reach (one-hand)","cm","higher"),
+      T("blockTouch","Block Touch Height","cm","higher"),
+      T("spikeTouch","Spike Touch Height (with approach)","cm","higher"),
+      T("proAgility","Pro Agility (5-10-5)","sec","lower"),
+      T("serveVelocity","Serve Velocity","km/h","higher"),
+      T("attackVelocity","Attack / Spike Velocity","km/h","higher"),
+    ]
+  },
+  "Cricket": {
+    note: "Based on BCCI / National Cricket Academy fitness criteria for Indian international selection.",
+    positions: ["Opening Batsman","Middle-order Batsman","Fast Bowler","Spin Bowler","Wicketkeeper","All-rounder"],
+    tests: [
+      T("yoyoLevel","Yo-Yo Test Level","level","higher"),
+      T("timeTrial2km","2km Time Trial (mm:ss)","mm:ss","lower"),
+      T("bowlingSpeed","Bowling Speed (bowlers)","km/h","higher"),
+    ],
+    benchmarks: { yoyoLevel: {value:17.1, label:"India men's team current bar: 17.1"} }
+  },
+  "Kabaddi": {
+    note: "Based on SAI / AKFI national talent-identification battery.",
+    positions: ["Raider","Corner Defender","All-rounder / Cover"],
+    tests: [
+      T("sprint40m","40m Dash","sec","lower"),
+      T("standingBroadJump","Standing Broad Jump","m","higher"),
+      T("sitAndReach","Sit and Reach","cm","higher"),
+      T("sitUps1min","1-min Sit-ups","reps","higher"),
+      T("run2_4km","2.4km Run","min","lower"),
+      T("raidSuccessRate","Raid Success Rate","%","higher"),
+      T("tackleSuccessRate","Tackle Success Rate","%","higher"),
+    ]
+  },
+  "Athletics (Track & Field)": {
+    note: "Based on the SAI / Khelo India grassroots talent-identification battery.",
+    positions: ["Sprints (100m/200m)","Middle / Long distance","Jumps","Throws"],
+    tests: [
+      T("sprint30m","30m Sprint","sec","lower"),
+      T("standingLongJump","Standing Long Jump","m","higher"),
+      T("verticalJump","Vertical Jump","cm","higher"),
+      T("obstacleRun50m","50m Obstacle Run","sec","lower"),
+      T("enduranceRun","1.6km Endurance Run","min","lower"),
+    ]
+  },
+  "Badminton / Tennis": {
+    note: "Based on BWF-aligned national junior/squad testing programmes.",
+    positions: ["Attacking / Power player","Defensive / Counter player","All-court / Balanced"],
+    tests: [
+      T("sprint20m","20m Sprint","sec","lower"),
+      T("verticalJump","Vertical Jump","cm","higher"),
+      T("handGrip","Hand-grip Strength","kg","higher"),
+      T("onCourtAgility","On-court Agility Test","sec","lower"),
+      T("yoyoLevel","Yo-Yo / Aerobic Test Level","level","higher"),
+    ]
+  },
+  "Kho-Kho": {
+    note: "Based on published Indian academic/SAI testing studies.",
+    positions: ["Chaser","Runner / Dodger"],
+    tests: [
+      T("sprint30m","30m Dash","sec","lower"),
+      T("shuttleRun","Shuttle Run","sec","lower"),
+      T("standingBroadJump","Standing Broad Jump","m","higher"),
+      T("sitAndReach","Sit and Reach","cm","higher"),
+    ]
+  },
+};
+
+const TIPS = {
+  sprint30m:"Short sprint repeats (10-30m) with full recovery, plus acceleration mechanics",
+  sprint40m:"Short sprint repeats with full recovery and start-technique drills",
+  sprint20m:"Short sprint repeats with full recovery and start-technique drills",
+  cmj:"Plyometrics — box jumps, depth jumps, squat jumps",
+  verticalJump:"Plyometrics — box jumps, depth jumps, squat jumps",
+  standingVertical:"Plyometrics — box jumps, depth jumps, squat jumps",
+  maxVertical:"Approach-jump technique and plyometric leg power training",
+  standingBroadJump:"Plyometrics and explosive leg-power training",
+  standingLongJump:"Plyometrics and explosive leg-power training",
+  agilityTtest:"Cone/ladder drills and change-of-direction technique work",
+  laneAgility:"Cone/ladder drills and change-of-direction technique work",
+  shuttleRun:"Cone/ladder drills and change-of-direction technique work",
+  onCourtAgility:"Sport-specific movement drills and change-of-direction work",
+  proAgility:"5-10-5 shuttle repeats and cutting-mechanics drills",
+  obstacleRun50m:"Technical drills combining sprinting with quick direction changes",
+  yoyoLevel:"Interval running and tempo runs to build the aerobic base",
+  timeTrial2km:"Interval running and tempo runs to build the aerobic base",
+  enduranceRun:"Interval running and tempo runs to build the aerobic base",
+  run2_4km:"Interval running and tempo runs to build the aerobic base",
+  handGrip:"Grip-strengthening work — farmer's carries, grip trainers",
+  sitUps1min:"Core-strength circuits — planks, sit-ups, medicine-ball twists",
+  sitAndReach:"Daily dynamic and static stretching / mobility routine",
+  bowlingSpeed:"Run-up mechanics and bowling-specific strength work with a coach",
+  serveVelocity:"Arm-speed and technique drills, plus shoulder-strength work",
+  attackVelocity:"Approach-jump timing and arm-speed drills",
+  blockTouch:"Timing drills at the net and reach-technique practice",
+  spikeTouch:"Approach-jump timing and reach-technique drills",
+  raidSuccessRate:"Video review and live raid-practice repetitions",
+  tackleSuccessRate:"Video review and live defensive-practice repetitions",
+  wingspan:"Fixed anthropometric trait — not trainable",
+  standingReach:"Fixed anthropometric trait — not trainable",
+};
+
+let allPlayers = [];
+let players = [];
+let radarChart = null;
+let selectedCoachPlayer = null;
+
+function escapeHtml(str){ const d=document.createElement("div"); d.textContent=str||""; return d.innerHTML; }
+function parseMaybeTime(str){
+  if(str==null || str==="") return null;
+  if(typeof str==="string" && str.includes(":")){
+    const [m,s] = str.split(":").map(Number);
+    if(isNaN(m)||isNaN(s)) return null;
+    return m*60+s;
+  }
+  const n = Number(str);
+  return isNaN(n) ? null : n;
+}
+function formatMaybeTime(sec, unit){
+  if(sec==null) return "—";
+  if(unit==="mm:ss"){ const m=Math.floor(sec/60), s=Math.round(sec%60); return `${m}:${s.toString().padStart(2,"0")}`; }
+  return sec;
+}
+
+const sportNames = Object.keys(SPORTS);
+
+// populate every sport <select> on the page
+function fillSportSelect(el){
+  el.innerHTML = "";
+  sportNames.forEach(name=>{ const o=document.createElement("option"); o.value=name; o.textContent=name; el.appendChild(o); });
+}
+const sSportEl = document.getElementById("s-sport");
+const qaSportEl = document.getElementById("qa-sport");
+const coachFilterEl = document.getElementById("coach-sport-filter");
+const filterSportEl = document.getElementById("filter-sport");
+fillSportSelect(sSportEl);
+fillSportSelect(qaSportEl);
+sportNames.forEach(name=>{
+  const o1=document.createElement("option"); o1.value=name; o1.textContent=name; coachFilterEl.appendChild(o1);
+  const o2=document.createElement("option"); o2.value=name; o2.textContent=name; filterSportEl.appendChild(o2);
+});
+
+function fillPositionSelect(el, sportName){
+  el.innerHTML = "";
+  const noneOpt=document.createElement("option"); noneOpt.value=""; noneOpt.textContent="Not sure yet";
+  el.appendChild(noneOpt);
+  SPORTS[sportName].positions.forEach(p=>{ const o=document.createElement("option"); o.value=p; o.textContent=p; el.appendChild(o); });
+}
+fillPositionSelect(document.getElementById("s-position"), sSportEl.value);
+sSportEl.addEventListener("change", ()=> fillPositionSelect(document.getElementById("s-position"), sSportEl.value));
+
+// ---------------- tabs ----------------
+document.querySelectorAll(".tab").forEach(tab=>{
+  tab.addEventListener("click", ()=>{
+    document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+    tab.classList.add("active");
+    ["student","coach","dashboard"].forEach(name=>{
+      document.getElementById("tab-"+name).style.display = tab.dataset.tab===name ? "block" : "none";
+    });
+    if(tab.dataset.tab==="dashboard") showListView();
+    if(tab.dataset.tab==="coach") loadCoachList();
+  });
+});
+
+// ---------------- STUDENT SAVE ----------------
+document.getElementById("btn-student-save").addEventListener("click", async ()=>{
+  const name = document.getElementById("s-name").value.trim();
+  const statusEl = document.getElementById("student-status");
+  if(!name){ statusEl.textContent = "Please enter your name."; return; }
+  const sportName = sSportEl.value;
+  const cfg = SPORTS[sportName];
+  const emptyTests = {}; cfg.tests.forEach(t=> emptyTests[t.key]=null);
+
+  const player = {
+    name, sport: sportName,
+    age: Number(document.getElementById("s-age").value) || null,
+    heightCm: Number(document.getElementById("s-height").value) || null,
+    weightKg: Number(document.getElementById("s-weight").value) || null,
+    bloodGroup: document.getElementById("s-blood").value,
+    currentPosition: document.getElementById("s-position").value || null,
+    tests: emptyTests,
+    matchesObserved: null,
+    notes: document.getElementById("s-notes").value.trim() || null,
+    createdAt: Date.now(),
+  };
+  statusEl.textContent = "Saving...";
+  try{
+    await apiCreate(player);
+    statusEl.textContent = `Thanks, ${name}! Your coach can now add your test results.`;
+    document.getElementById("s-name").value="";
+    document.getElementById("s-age").value="";
+    document.getElementById("s-height").value="";
+    document.getElementById("s-weight").value="";
+    document.getElementById("s-position").value="";
+    document.getElementById("s-notes").value="";
+  }catch(err){
+    statusEl.textContent = "Couldn't save. Please try again.";
+  }
+});
+
+// ---------------- COACH: list & select ----------------
+async function loadCoachList(){
+  const listEl = document.getElementById("coach-player-list");
+  listEl.innerHTML = "<div class='empty'>Loading...</div>";
+  try{
+    allPlayers = await apiGetAll();
+    allPlayers.sort((a,b)=> (b.createdAt||0)-(a.createdAt||0));
+    renderCoachList();
+  }catch(err){
+    listEl.innerHTML = "<div class='empty'>Couldn't load students.</div>";
+  }
+}
+function renderCoachList(){
+  const listEl = document.getElementById("coach-player-list");
+  const emptyEl = document.getElementById("coach-list-empty");
+  const sportVal = coachFilterEl.value;
+  const searchVal = document.getElementById("coach-search").value.trim().toLowerCase();
+  let list = allPlayers;
+  if(sportVal) list = list.filter(p=>p.sport===sportVal);
+  if(searchVal) list = list.filter(p=>p.name.toLowerCase().includes(searchVal));
+  listEl.innerHTML = "";
+  if(list.length===0){ emptyEl.style.display="block"; emptyEl.textContent="No matching students yet."; return; }
+  emptyEl.style.display="none";
+  list.forEach(p=>{
+    const hasTests = p.tests && Object.values(p.tests).some(v=>v!=null);
+    const item = document.createElement("div");
+    item.className = "player-item" + (selectedCoachPlayer && selectedCoachPlayer.id===p.id ? " selected" : "");
+    item.innerHTML = `
+      <div>
+        <div class="player-name">${escapeHtml(p.name)}</div>
+        <div class="player-meta">${escapeHtml(p.sport)} ${p.age ? "· "+p.age+" yrs" : ""}</div>
+      </div>
+      <span class="badge ${hasTests?'done':'pending'}">${hasTests ? "Results added" : "Awaiting results"}</span>
+    `;
+    item.addEventListener("click", ()=> selectCoachPlayer(p));
+    listEl.appendChild(item);
+  });
+}
+coachFilterEl.addEventListener("change", renderCoachList);
+document.getElementById("coach-search").addEventListener("input", renderCoachList);
+
+document.getElementById("coach-quickadd-toggle").addEventListener("click", ()=>{
+  const box = document.getElementById("coach-quickadd-box");
+  box.style.display = box.style.display==="none" ? "block" : "none";
+});
+document.getElementById("btn-quickadd").addEventListener("click", async ()=>{
+  const name = document.getElementById("qa-name").value.trim();
+  if(!name) return;
+  const sportName = qaSportEl.value;
+  const cfg = SPORTS[sportName];
+  const emptyTests = {}; cfg.tests.forEach(t=> emptyTests[t.key]=null);
+  const player = { name, sport: sportName, age:null, heightCm:null, weightKg:null, bloodGroup:null, currentPosition:null, tests:emptyTests, matchesObserved:null, notes:null, createdAt:Date.now() };
+  const res = await apiCreate(player);
+  const newPlayer = {id: res.id, ...player};
+  allPlayers.unshift(newPlayer);
+  document.getElementById("qa-name").value="";
+  document.getElementById("coach-quickadd-box").style.display="none";
+  renderCoachList();
+  selectCoachPlayer(newPlayer);
+});
+
+function selectCoachPlayer(p){
+  selectedCoachPlayer = p;
+  renderCoachList();
+  const cfg = SPORTS[p.sport];
+  document.getElementById("coach-selected-box").style.display = "block";
+  document.getElementById("coach-selected-info").innerHTML = `
+    <span class="chip">${escapeHtml(p.name)}</span>
+    <span class="chip">${escapeHtml(p.sport)}</span>
+    ${p.age ? `<span class="chip">${p.age} yrs</span>` : ""}
+  `;
+  fillPositionSelect(document.getElementById("c-position"), p.sport);
+  document.getElementById("c-position").value = p.currentPosition || "";
+  document.getElementById("c-tests-note").textContent = cfg.note;
+
+  const fieldsEl = document.getElementById("c-test-fields");
+  fieldsEl.innerHTML = "";
+  cfg.tests.forEach(t=>{
+    const existing = p.tests ? p.tests[t.key] : null;
+    const div = document.createElement("div");
+    div.className = "test-field";
+    const inputType = t.unit==="mm:ss" ? "text" : "number";
+    const val = t.unit==="mm:ss" ? formatMaybeTime(existing,"mm:ss") : (existing!=null?existing:"");
+    div.innerHTML = `
+      <label>${t.label} <span class="unit-tag">${t.unit!=="mm:ss" ? "("+t.unit+")" : ""}</span></label>
+      <input type="${inputType}" step="any" value="${val==='—'?'':val}" id="ctest-${t.key}">
+    `;
+    fieldsEl.appendChild(div);
+  });
+  document.getElementById("c-matches").value = p.matchesObserved || "";
+  document.getElementById("c-notes").value = p.notes || "";
+  document.getElementById("coach-status").textContent = "";
+}
+
+document.getElementById("btn-coach-save").addEventListener("click", async ()=>{
+  if(!selectedCoachPlayer) return;
+  const p = selectedCoachPlayer;
+  const cfg = SPORTS[p.sport];
+  const statusEl = document.getElementById("coach-status");
+  const tests = {};
+  cfg.tests.forEach(t=>{
+    const raw = document.getElementById(`ctest-${t.key}`).value.trim();
+    tests[t.key] = t.unit==="mm:ss" ? parseMaybeTime(raw) : (raw==="" ? null : Number(raw));
+  });
+  const updates = {
+    tests,
+    currentPosition: document.getElementById("c-position").value || null,
+    matchesObserved: Number(document.getElementById("c-matches").value) || null,
+    notes: document.getElementById("c-notes").value.trim() || null,
+  };
+  statusEl.textContent = "Saving...";
+  try{
+    await apiUpdate(p.id, updates);
+    statusEl.textContent = `Saved results for ${p.name}.`;
+    const idx = allPlayers.findIndex(x=>x.id===p.id);
+    if(idx>-1) allPlayers[idx] = {...allPlayers[idx], ...updates};
+    renderCoachList();
+  }catch(err){
+    statusEl.textContent = "Couldn't save. Please try again.";
+  }
+});
+
+// ---------------- DASHBOARD ----------------
+async function loadPlayers(){
+  const listEl = document.getElementById("player-list");
+  const emptyEl = document.getElementById("list-empty");
+  listEl.innerHTML = "<div class='empty'>Loading...</div>";
+  try{
+    allPlayers = await apiGetAll();
+    allPlayers.sort((a,b)=> (b.createdAt||0)-(a.createdAt||0));
+    renderPlayerList();
+  }catch(err){
+    listEl.innerHTML = "<div class='empty'>Couldn't load players.</div>";
+  }
+}
+function renderPlayerList(){
+  const listEl = document.getElementById("player-list");
+  const emptyEl = document.getElementById("list-empty");
+  const filterVal = filterSportEl.value;
+  players = filterVal ? allPlayers.filter(p=>p.sport===filterVal) : allPlayers;
+  listEl.innerHTML = "";
+  if(players.length===0){
+    emptyEl.style.display="block";
+    emptyEl.textContent = allPlayers.length===0 ? "No players added yet." : "No players for this sport yet.";
+    return;
+  }
+  emptyEl.style.display = "none";
+  players.forEach(p=>{
+    const hasTests = p.tests && Object.values(p.tests).some(v=>v!=null);
+    const item = document.createElement("div");
+    item.className = "player-item";
+    item.innerHTML = `
+      <div>
+        <div class="player-name">${escapeHtml(p.name)}</div>
+        <div class="player-meta">${p.age ? p.age+" yrs · " : ""}${escapeHtml(p.sport||"")} · ${p.currentPosition || "role TBD"}</div>
+      </div>
+      <span class="badge ${hasTests?'done':'pending'}">${hasTests ? "Results added" : "Awaiting results"}</span>
+    `;
+    item.addEventListener("click", ()=> showDetailView(p));
+    listEl.appendChild(item);
+  });
+}
+filterSportEl.addEventListener("change", renderPlayerList);
+function showListView(){
+  document.getElementById("dash-list-view").style.display = "block";
+  document.getElementById("dash-detail-view").style.display = "none";
+  loadPlayers();
+}
+document.getElementById("back-to-list").addEventListener("click", showListView);
+
+function percentileFor(sportName, testKey, direction, value){
+  if(value==null) return null;
+  const peers = allPlayers.filter(p=>p.sport===sportName && p.tests && p.tests[testKey]!=null).map(p=>p.tests[testKey]);
+  if(peers.length < 2) return null;
+  let better;
+  if(direction==="higher"){ better = peers.filter(v=>v<=value).length; }
+  else { better = peers.filter(v=>v>=value).length; }
+  return Math.round((better/peers.length)*100);
+}
+
+function showDetailView(p){
+  document.getElementById("dash-list-view").style.display = "none";
+  document.getElementById("dash-detail-view").style.display = "block";
+  const cfg = SPORTS[p.sport] || SPORTS[Object.keys(SPORTS)[0]];
+  const tests = p.tests || {};
+  const rows = cfg.tests.map(t=>{
+    const val = tests[t.key];
+    const pctl = percentileFor(p.sport, t.key, t.direction, val);
+    return {t, val, pctl};
+  });
+  const strengths = rows.filter(r=> r.pctl!=null && r.pctl>=70);
+  const weaknesses = rows.filter(r=> r.pctl!=null && r.pctl<=30);
+  const squadCount = allPlayers.filter(x=>x.sport===p.sport).length;
+
+  let benchHtml = "";
+  if(cfg.benchmarks){
+    Object.entries(cfg.benchmarks).forEach(([key,b])=>{
+      const val = tests[key];
+      if(val!=null){
+        const t = cfg.tests.find(x=>x.key===key);
+        const met = t.direction==="higher" ? val>=b.value : val<=b.value;
+        benchHtml += `<div class="bench-box">${t.label}: <b>${formatMaybeTime(val,t.unit)}</b> vs ${b.label} — ${met ? "<span style='color:var(--good)'>meets benchmark ✓</span>" : "<span style='color:var(--bad)'>below benchmark</span>"}</div>`;
+      }
+    });
+    if(p.sport==="Cricket" && tests.timeTrial2km!=null){
+      const isBowler = (p.currentPosition||"").toLowerCase().includes("bowler");
+      const targetSec = isBowler ? 8*60+15 : 8*60+30;
+      const met = tests.timeTrial2km <= targetSec;
+      benchHtml += `<div class="bench-box">2km Time Trial: <b>${formatMaybeTime(tests.timeTrial2km,"mm:ss")}</b> vs BCCI target (${isBowler?"bowlers":"others"}): <b>${formatMaybeTime(targetSec,"mm:ss")}</b> — ${met ? "<span style='color:var(--good)'>meets benchmark ✓</span>" : "<span style='color:var(--bad)'>below benchmark</span>"}</div>`;
+    }
+  }
+
+  const content = document.getElementById("detail-content");
+  content.innerHTML = `
+    <div class="detail-head">
+      <div>
+        <h1 style="margin-bottom:2px;">${escapeHtml(p.name)}</h1>
+        <div class="player-meta">
+          ${escapeHtml(p.sport||"")} ${p.age ? "· "+p.age+" yrs" : ""} ${p.heightCm ? "· "+p.heightCm+" cm" : ""} ${p.weightKg ? "· "+p.weightKg+" kg" : ""} ${p.bloodGroup ? "· "+p.bloodGroup : ""}
+        </div>
+        <div class="chip-row"><span class="chip">Role: ${p.currentPosition || "not set"}</span></div>
+      </div>
+      <span class="del" id="del-btn">Delete player</span>
+    </div>
+    ${benchHtml}
+    <div class="charts">
+      <div>
+        <h3>Test results</h3>
+        <table class="testtable">
+          <tr><th>Test</th><th>Value</th><th>Squad %tile</th></tr>
+          ${rows.map(r=>`<tr>
+            <td>${r.t.label}</td>
+            <td>${r.val!=null ? formatMaybeTime(r.val,r.t.unit)+(r.t.unit!=="mm:ss"?" "+r.t.unit:"") : "—"}</td>
+            <td>${r.pctl!=null ? `<span class="pctl ${r.pctl>=70?'hi':r.pctl<=30?'lo':'mid'}">${r.pctl}th</span>` : "<span class='notice'>n/a</span>"}</td>
+          </tr>`).join("")}
+        </table>
+        <p class="notice">Percentile = how this player compares to the ${squadCount} player(s) recorded for ${escapeHtml(p.sport)}. Needs 2+ players with that test filled in to show.</p>
+      </div>
+      <div>
+        <h3>Relative profile</h3>
+        <div class="chart-box"><canvas id="radar-canvas"></canvas></div>
+      </div>
+    </div>
+    <div class="charts" style="margin-top:18px;">
+      <div>
+        <h3>Squad strengths</h3>
+        ${strengths.length ? `<div class="chip-row">${strengths.map(r=>`<span class="chip good">${r.t.label} (${r.pctl}th)</span>`).join("")}</div>`
+                            : `<p class="notice">No standout results (70th+ percentile) yet.</p>`}
+      </div>
+      <div>
+        <h3>Areas to work on</h3>
+        ${weaknesses.length ? `<ul class="tips">${weaknesses.map(r=>`<li><strong>${r.t.label} (${r.pctl}th)</strong> — ${TIPS[r.t.key]||"Targeted drills with your coach"}</li>`).join("")}</ul>`
+                             : `<p class="notice">No clear weak points (30th percentile or below) right now.</p>`}
+      </div>
+    </div>
+    ${p.notes ? `<h3 style="margin-top:18px;">Notes</h3><p class="notice" style="font-size:0.88rem;">${escapeHtml(p.notes)}</p>` : ""}
+  `;
+
+  const radarCtx = document.getElementById("radar-canvas").getContext("2d");
+  if(radarChart) radarChart.destroy();
+  const isDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+  const gridColor = isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.08)";
+  const textColor = isDark ? "#c7ccd6" : "#4b5563";
+  radarChart = new Chart(radarCtx, {
+    type:"radar",
+    data:{ labels: rows.map(r=>r.t.label), datasets:[{ label:p.name, data: rows.map(r=>r.pctl!=null?r.pctl:50), backgroundColor:"rgba(47,111,237,0.18)", borderColor:"#2f6fed", pointBackgroundColor:"#2f6fed", borderWidth:2 }] },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+      scales:{ r:{ min:0, max:100, ticks:{stepSize:25, color:textColor, backdropColor:"transparent"}, grid:{color:gridColor}, angleLines:{color:gridColor}, pointLabels:{color:textColor, font:{size:10}} } } }
+  });
+
+  document.getElementById("del-btn").addEventListener("click", async ()=>{
+    if(!confirm(`Delete ${p.name}? This can't be undone.`)) return;
+    try{ await apiDelete(p.id); showListView(); }
+    catch(err){ alert("Couldn't delete right now."); }
+  });
+}
+
+// warn on-page if the script URL hasn't been configured yet
+window.addEventListener("DOMContentLoaded", ()=>{
+  if(SCRIPT_URL.includes("PASTE_YOUR")){
+    const warn = document.createElement("div");
+    warn.style.cssText = "background:#fff3cd;border:1px solid #e0982b;color:#7a5200;padding:12px 16px;border-radius:8px;margin-bottom:16px;font-size:0.88rem;";
+    warn.textContent = "Setup needed: open this file and replace SCRIPT_URL near the top of the <script> with your own Google Apps Script Web App URL.";
+    document.querySelector(".wrap").prepend(warn);
+  }
+});
+</script>
+</body>
+</html>
